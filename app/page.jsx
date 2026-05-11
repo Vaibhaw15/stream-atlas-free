@@ -1593,6 +1593,857 @@ String reversed = IntStream.range(0, parts.length)
     explanation:
       "Three-level pipeline: outer group by region (sorted), inner group by product, inner-inner sum amounts. This is the kind of question that tests whether you really understand collector composition.",
   },
+
+  // ============ COLLECTORS: COMPLETE FUNCTION REFERENCE (101-135) ============
+  {
+    id: 101,
+    title: "Collectors.toList()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Collect a stream of integers into a List using Collectors.toList().",
+    input: "List<Integer> nums = List.of(1, 2, 3, 4, 5);",
+    output: "[1, 2, 3, 4, 5]",
+    hint: "The most common terminal collector.",
+    solution: `List<Integer> result = nums.stream()
+    .collect(Collectors.toList());`,
+    explanation:
+      "Collectors.toList() accumulates elements into a List. The implementation type isn't guaranteed (currently ArrayList) and the returned list is mutable. From Java 16+, prefer stream.toList() which returns an unmodifiable list more efficiently.",
+  },
+  {
+    id: 102,
+    title: "Collectors.toSet()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Collect distinct values into a Set.",
+    input: "List<Integer> nums = List.of(1, 2, 2, 3, 3, 3, 4);",
+    output: "[1, 2, 3, 4]",
+    hint: "toSet() automatically removes duplicates.",
+    solution: `Set<Integer> result = nums.stream()
+    .collect(Collectors.toSet());`,
+    explanation:
+      "Collectors.toSet() returns a Set (HashSet by default). Order is NOT preserved. If you need ordering, use Collectors.toCollection(LinkedHashSet::new). Duplicates are removed via equals()/hashCode().",
+  },
+  {
+    id: 103,
+    title: "Collectors.toUnmodifiableList()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Collect into a List that throws on mutation.",
+    input: 'List<String> names = List.of("alice", "bob", "carol");',
+    output: "[ALICE, BOB, CAROL] — immutable",
+    hint: "Use toUnmodifiableList() (Java 10+).",
+    solution: `List<String> result = names.stream()
+    .map(String::toUpperCase)
+    .collect(Collectors.toUnmodifiableList());`,
+    explanation:
+      "Collectors.toUnmodifiableList() (Java 10+) returns a List whose add/remove/set methods throw UnsupportedOperationException. It does not permit null elements. Safer than toList() when handing the result to other code.",
+  },
+  {
+    id: 104,
+    title: "Collectors.toUnmodifiableSet()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Collect distinct elements into an immutable Set.",
+    input: 'List<String> tags = List.of("java", "java", "stream", "lambda");',
+    output: "[java, stream, lambda] — immutable",
+    hint: "toUnmodifiableSet() rejects mutation and nulls.",
+    solution: `Set<String> result = tags.stream()
+    .collect(Collectors.toUnmodifiableSet());`,
+    explanation:
+      "Like toUnmodifiableList but returns a Set. No nulls allowed. Use it when you want a defensive copy that callers cannot mutate.",
+  },
+  {
+    id: 105,
+    title: "Collectors.toCollection(TreeSet::new)",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Collect into a TreeSet to get sorted, unique values.",
+    input: "List<Integer> nums = List.of(5, 2, 8, 2, 5, 1, 8);",
+    output: "[1, 2, 5, 8]",
+    hint: "Pass a Supplier for the exact collection type you want.",
+    solution: `TreeSet<Integer> result = nums.stream()
+    .collect(Collectors.toCollection(TreeSet::new));`,
+    explanation:
+      "Collectors.toCollection(Supplier) gives you full control: TreeSet for sorted-unique, LinkedHashSet for insertion-order-unique, LinkedList instead of ArrayList, etc. Useful when the default toList/toSet isn't what you need.",
+  },
+  {
+    id: 106,
+    title: "Collectors.toMap() — basic",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Build a Map from employee id to name.",
+    input: "List<Employee> employees;",
+    output: "{1=Alice, 2=Bob, 3=Carol, ...}",
+    hint: "Pass keyMapper and valueMapper functions.",
+    solution: `Map<Integer, String> result = employees.stream()
+    .collect(Collectors.toMap(
+        Employee::getId,
+        Employee::getName
+    ));`,
+    explanation:
+      "Collectors.toMap(keyMapper, valueMapper) builds a Map. WARNING: throws IllegalStateException on duplicate keys. Use the 3-arg form with a merge function when keys can collide.",
+  },
+  {
+    id: 107,
+    title: "Collectors.toMap() with merge function",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Build a Map<Department, totalSalary> — duplicate keys must be summed.",
+    input: "List<Employee> employees;",
+    output: "{Engineering=250000.0, Sales=155000.0, HR=70000.0}",
+    hint: "Use the 3-arg toMap with a merge BinaryOperator.",
+    solution: `Map<String, Double> result = employees.stream()
+    .collect(Collectors.toMap(
+        Employee::getDepartment,
+        Employee::getSalary,
+        Double::sum
+    ));`,
+    explanation:
+      "When two values map to the same key, the merge function (BinaryOperator) decides what to keep. Common choices: Double::sum, Integer::sum, (a, b) -> a (keep first), (a, b) -> b (keep last).",
+  },
+  {
+    id: 108,
+    title: "Collectors.toMap() with mapFactory",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Build a TreeMap (sorted by key) of id → name.",
+    input: "List<Employee> employees;",
+    output: "TreeMap sorted by id",
+    hint: "Use the 4-arg toMap with a Supplier for the Map type.",
+    solution: `TreeMap<Integer, String> result = employees.stream()
+    .collect(Collectors.toMap(
+        Employee::getId,
+        Employee::getName,
+        (a, b) -> a,
+        TreeMap::new
+    ));`,
+    explanation:
+      "The 4-arg toMap(keyMapper, valueMapper, mergeFn, mapFactory) lets you pick the exact Map implementation. Use TreeMap for sorted, LinkedHashMap for insertion-order, ConcurrentHashMap for thread-safe.",
+  },
+  {
+    id: 109,
+    title: "Collectors.toUnmodifiableMap()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Build an immutable Map from id → name.",
+    input: "List<Employee> employees;",
+    output: "Immutable Map<Integer, String>",
+    hint: "Java 10+ — toUnmodifiableMap rejects writes and nulls.",
+    solution: `Map<Integer, String> result = employees.stream()
+    .collect(Collectors.toUnmodifiableMap(
+        Employee::getId,
+        Employee::getName
+    ));`,
+    explanation:
+      "Returns a Map.of-style immutable map. No nulls allowed (keys or values). Best choice when the map is read-only and shouldn't be mutated downstream.",
+  },
+  {
+    id: 110,
+    title: "Collectors.joining() — no separator",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Concatenate all strings into one.",
+    input: 'List<String> parts = List.of("Hello", "World", "!");',
+    output: '"HelloWorld!"',
+    hint: "joining() with no args concatenates directly.",
+    solution: `String result = parts.stream()
+    .collect(Collectors.joining());`,
+    explanation:
+      "Collectors.joining() concatenates CharSequence elements with no delimiter. Internally uses StringBuilder — far faster than reduce((a,b) -> a + b).",
+  },
+  {
+    id: 111,
+    title: "Collectors.joining(delimiter)",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Join names with a comma-space separator.",
+    input: 'List<String> names = List.of("Alice", "Bob", "Carol");',
+    output: '"Alice, Bob, Carol"',
+    hint: "joining(\", \") inserts the delimiter between elements only.",
+    solution: `String result = names.stream()
+    .collect(Collectors.joining(", "));`,
+    explanation:
+      "The 1-arg form places the delimiter only BETWEEN elements — no leading or trailing delimiter. The most common form in practice.",
+  },
+  {
+    id: 112,
+    title: "Collectors.joining(delimiter, prefix, suffix)",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Wrap a comma-joined list in brackets.",
+    input: 'List<String> names = List.of("Alice", "Bob", "Carol");',
+    output: '"[Alice, Bob, Carol]"',
+    hint: "joining(delim, prefix, suffix) wraps the whole thing.",
+    solution: `String result = names.stream()
+    .collect(Collectors.joining(", ", "[", "]"));`,
+    explanation:
+      "The 3-arg form is perfect for producing list-like representations, SQL IN-clauses, JSON arrays, or any wrapped output. Prefix and suffix are added even when the stream is empty (\"[]\").",
+  },
+  {
+    id: 113,
+    title: "Collectors.counting()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Count how many employees are in each department.",
+    input: "List<Employee> employees;",
+    output: "{Engineering=3, Sales=2, HR=1}",
+    hint: "Use counting() as the downstream of groupingBy.",
+    solution: `Map<String, Long> result = employees.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment,
+        Collectors.counting()
+    ));`,
+    explanation:
+      "Collectors.counting() returns a Long count. Almost always used as a downstream collector inside groupingBy or partitioningBy. Equivalent to summingLong(e -> 1L).",
+  },
+  {
+    id: 114,
+    title: "Collectors.summingInt()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Sum the ages of all employees.",
+    input: "List<Employee> employees;",
+    output: "211",
+    hint: "summingInt takes a ToIntFunction.",
+    solution: `int totalAge = employees.stream()
+    .collect(Collectors.summingInt(Employee::getAge));`,
+    explanation:
+      "Collectors.summingInt(ToIntFunction) extracts an int from each element and returns the sum. There are summingLong and summingDouble variants for the other primitive types.",
+  },
+  {
+    id: 115,
+    title: "Collectors.summingDouble()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Sum the total salary across all employees.",
+    input: "List<Employee> employees;",
+    output: "475000.0",
+    hint: "summingDouble for double-valued aggregates.",
+    solution: `double total = employees.stream()
+    .collect(Collectors.summingDouble(Employee::getSalary));`,
+    explanation:
+      "Uses Kahan-style compensated summation to reduce floating-point drift versus naive addition. Prefer it over .mapToDouble().sum() when aggregating money or scientific values.",
+  },
+  {
+    id: 116,
+    title: "Collectors.averagingInt()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Compute the average age of employees.",
+    input: "List<Employee> employees;",
+    output: "35.16...",
+    hint: "averagingInt always returns Double.",
+    solution: `double avgAge = employees.stream()
+    .collect(Collectors.averagingInt(Employee::getAge));`,
+    explanation:
+      "Collectors.averagingInt/Long/Double returns a Double — never an int, even when the inputs are ints. Returns 0.0 on an empty stream (NOT Optional or NaN).",
+  },
+  {
+    id: 117,
+    title: "Collectors.averagingDouble()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Compute the average salary across all employees.",
+    input: "List<Employee> employees;",
+    output: "79166.66...",
+    hint: "averagingDouble for double-valued averages.",
+    solution: `double avgSalary = employees.stream()
+    .collect(Collectors.averagingDouble(Employee::getSalary));`,
+    explanation:
+      "Same Kahan-compensated summation as summingDouble, then divides by count. The standard way to get an arithmetic mean of doubles from a stream.",
+  },
+  {
+    id: 118,
+    title: "Collectors.minBy()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Find the employee with the lowest salary.",
+    input: "List<Employee> employees;",
+    output: "Optional[Dave($65000)]",
+    hint: "minBy takes a Comparator and returns Optional.",
+    solution: `Optional<Employee> lowest = employees.stream()
+    .collect(Collectors.minBy(
+        Comparator.comparingDouble(Employee::getSalary)
+    ));`,
+    explanation:
+      "Collectors.minBy returns an Optional because the stream might be empty. Mostly used as a downstream of groupingBy — for top-level use, stream.min(cmp) is simpler.",
+  },
+  {
+    id: 119,
+    title: "Collectors.maxBy()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Find the highest-paid employee in each department.",
+    input: "List<Employee> employees;",
+    output: "{Engineering=Optional[Alice], Sales=Optional[Carol], HR=Optional[Frank]}",
+    hint: "groupingBy + maxBy is a classic combo.",
+    solution: `Map<String, Optional<Employee>> top = employees.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment,
+        Collectors.maxBy(
+            Comparator.comparingDouble(Employee::getSalary)
+        )
+    ));`,
+    explanation:
+      "Returns Optional<T> per group. To unwrap automatically, wrap with collectingAndThen(maxBy(...), Optional::get) — safe only when groups are guaranteed non-empty (which they always are with groupingBy).",
+  },
+  {
+    id: 120,
+    title: "Collectors.summarizingInt()",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Get count, sum, min, max, and avg of employee ages in one pass.",
+    input: "List<Employee> employees;",
+    output: "IntSummaryStatistics{count=6, sum=211, min=25, max=50, avg=35.16}",
+    hint: "summarizingInt returns IntSummaryStatistics.",
+    solution: `IntSummaryStatistics stats = employees.stream()
+    .collect(Collectors.summarizingInt(Employee::getAge));
+
+long count = stats.getCount();
+int sum = stats.getSum();
+int min = stats.getMin();
+int max = stats.getMax();
+double avg = stats.getAverage();`,
+    explanation:
+      "Collectors.summarizingInt/Long/Double computes ALL five aggregates (count, sum, min, max, avg) in a single pass. Much more efficient than five separate streams when you need multiple statistics.",
+  },
+  {
+    id: 121,
+    title: "Collectors.summarizingDouble()",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Get summary statistics for salaries grouped by department.",
+    input: "List<Employee> employees;",
+    output: "Map<String, DoubleSummaryStatistics>",
+    hint: "groupingBy + summarizingDouble.",
+    solution: `Map<String, DoubleSummaryStatistics> stats = employees.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment,
+        Collectors.summarizingDouble(Employee::getSalary)
+    ));`,
+    explanation:
+      "DoubleSummaryStatistics returns count/sum/min/max/average as doubles. Perfect for one-pass reporting — count employees, total payroll, lowest/highest salary, and average per department all at once.",
+  },
+  {
+    id: 122,
+    title: "Collectors.groupingBy() — basic",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Group employees by department.",
+    input: "List<Employee> employees;",
+    output: "{Engineering=[Alice, Bob, Eve], Sales=[Carol, Dave], HR=[Frank]}",
+    hint: "Pass a classifier Function.",
+    solution: `Map<String, List<Employee>> byDept = employees.stream()
+    .collect(Collectors.groupingBy(Employee::getDepartment));`,
+    explanation:
+      "Collectors.groupingBy(classifier) returns Map<K, List<T>>. The default downstream is toList(). Unlike toMap, this NEVER throws on duplicate keys — duplicates accumulate into the list.",
+  },
+  {
+    id: 123,
+    title: "Collectors.groupingBy() with downstream",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Count employees per department.",
+    input: "List<Employee> employees;",
+    output: "{Engineering=3, Sales=2, HR=1}",
+    hint: "Pass counting() as the downstream collector.",
+    solution: `Map<String, Long> counts = employees.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment,
+        Collectors.counting()
+    ));`,
+    explanation:
+      "The 2-arg groupingBy(classifier, downstream) replaces toList() with any other collector. Common downstreams: counting(), summingDouble, averagingInt, mapping, maxBy, summarizingInt.",
+  },
+  {
+    id: 124,
+    title: "Collectors.groupingBy() with mapping downstream",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Get a Map of department → list of employee NAMES (not full Employee objects).",
+    input: "List<Employee> employees;",
+    output: "{Engineering=[Alice, Bob, Eve], Sales=[Carol, Dave], HR=[Frank]}",
+    hint: "Combine groupingBy with mapping(Employee::getName, toList()).",
+    solution: `Map<String, List<String>> names = employees.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment,
+        Collectors.mapping(Employee::getName, Collectors.toList())
+    ));`,
+    explanation:
+      "mapping(mapper, downstream) transforms each element BEFORE feeding the downstream collector. Use it to project fields out of grouped values without storing whole objects.",
+  },
+  {
+    id: 125,
+    title: "Collectors.groupingBy() with mapFactory (TreeMap)",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Group employees by department, with departments sorted alphabetically.",
+    input: "List<Employee> employees;",
+    output: "TreeMap sorted by department name",
+    hint: "The 3-arg groupingBy(classifier, mapFactory, downstream) controls the Map type.",
+    solution: `TreeMap<String, List<Employee>> byDept = employees.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment,
+        TreeMap::new,
+        Collectors.toList()
+    ));`,
+    explanation:
+      "The 3-arg form picks the Map implementation: TreeMap for sorted keys, LinkedHashMap for encounter order, ConcurrentHashMap for parallel streams. Powerful for predictable iteration order.",
+  },
+  {
+    id: 126,
+    title: "Collectors.partitioningBy()",
+    category: "Collectors",
+    difficulty: "Easy",
+    problem: "Split employees into highly paid (>=80k) and others.",
+    input: "List<Employee> employees;",
+    output: "{false=[Bob, Dave, Frank], true=[Alice, Carol, Eve]}",
+    hint: "partitioningBy takes a Predicate; returns Map<Boolean, List<T>>.",
+    solution: `Map<Boolean, List<Employee>> parts = employees.stream()
+    .collect(Collectors.partitioningBy(
+        e -> e.getSalary() >= 80000
+    ));`,
+    explanation:
+      "Collectors.partitioningBy is a specialized groupingBy where the key is always a Boolean. CRUCIAL: the result ALWAYS contains both keys (true and false), even if one is empty — unlike groupingBy where missing groups produce no key.",
+  },
+  {
+    id: 127,
+    title: "Collectors.partitioningBy() with downstream",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Count how many employees are highly paid vs. not.",
+    input: "List<Employee> employees;",
+    output: "{false=3, true=3}",
+    hint: "partitioningBy(predicate, downstream).",
+    solution: `Map<Boolean, Long> counts = employees.stream()
+    .collect(Collectors.partitioningBy(
+        e -> e.getSalary() >= 80000,
+        Collectors.counting()
+    ));`,
+    explanation:
+      "Combine partitioningBy with any downstream (counting, summingDouble, mapping, etc.) for two-bucket aggregations. Faster and clearer than running filter().count() twice.",
+  },
+  {
+    id: 128,
+    title: "Collectors.mapping()",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Build a Map of department → comma-joined employee names.",
+    input: "List<Employee> employees;",
+    output: "{Engineering=\"Alice, Bob, Eve\", Sales=\"Carol, Dave\", HR=\"Frank\"}",
+    hint: "Chain mapping + joining as the downstream of groupingBy.",
+    solution: `Map<String, String> result = employees.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment,
+        Collectors.mapping(
+            Employee::getName,
+            Collectors.joining(", ")
+        )
+    ));`,
+    explanation:
+      "Collectors.mapping(mapper, downstream) is an ADAPTER — it transforms each element before passing it on. Used almost exclusively as a downstream collector. Think of it as 'map() but at collector level'.",
+  },
+  {
+    id: 129,
+    title: "Collectors.filtering() — Java 9+",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Group employees by department, keeping only those earning over 80k per group.",
+    input: "List<Employee> employees;",
+    output: "{Engineering=[Alice], Sales=[Carol], HR=[]}",
+    hint: "filtering() as a downstream — IMPORTANT: it keeps empty groups.",
+    solution: `Map<String, List<Employee>> result = employees.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment,
+        Collectors.filtering(
+            e -> e.getSalary() > 80000,
+            Collectors.toList()
+        )
+    ));`,
+    explanation:
+      "KEY DIFFERENCE: filter() BEFORE groupingBy drops entire empty groups. Collectors.filtering() KEEPS the group with an empty list. Use filtering when downstream code needs every group key to be present.",
+  },
+  {
+    id: 130,
+    title: "Collectors.flatMapping() — Java 9+",
+    category: "Collectors",
+    difficulty: "Hard",
+    problem: "For each customer, collect all unique categories across their transactions.",
+    input: "List<Transaction> txns;",
+    output: "{C001=[Food, Travel], C002=[Food, Books], C003=[Travel]}",
+    hint: "Use flatMapping inside groupingBy.",
+    solution: `Map<String, Set<String>> result = txns.stream()
+    .collect(Collectors.groupingBy(
+        Transaction::getCustomerId,
+        Collectors.flatMapping(
+            t -> Stream.of(t.getCategory()),
+            Collectors.toSet()
+        )
+    ));`,
+    explanation:
+      "Collectors.flatMapping(mapper, downstream) is like mapping() but the mapper returns a Stream that gets flattened. Use when each element expands to multiple values you want to aggregate.",
+  },
+  {
+    id: 131,
+    title: "Collectors.reducing(identity, op)",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Compute the product of all numbers via Collectors.reducing.",
+    input: "List<Integer> nums = List.of(1, 2, 3, 4, 5);",
+    output: "120",
+    hint: "reducing(identity, BinaryOperator) returns T, not Optional.",
+    solution: `Integer product = nums.stream()
+    .collect(Collectors.reducing(1, (a, b) -> a * b));`,
+    explanation:
+      "The 2-arg reducing supplies an identity, so the result is never empty. Same as stream.reduce(identity, op) but works as a downstream collector.",
+  },
+  {
+    id: 132,
+    title: "Collectors.reducing(identity, mapper, op)",
+    category: "Collectors",
+    difficulty: "Hard",
+    problem: "Find the longest name in each department.",
+    input: "List<Employee> employees;",
+    output: "{Engineering=\"Alice\", Sales=\"Carol\", HR=\"Frank\"}",
+    hint: "3-arg reducing maps each element before reducing.",
+    solution: `Map<String, String> result = employees.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment,
+        Collectors.reducing(
+            "",
+            Employee::getName,
+            (a, b) -> a.length() >= b.length() ? a : b
+        )
+    ));`,
+    explanation:
+      "The 3-arg form takes identity, a mapper (Function<T,U>), and a BinaryOperator<U>. Combines map + reduce in one collector — efficient inside groupingBy.",
+  },
+  {
+    id: 133,
+    title: "Collectors.reducing(op) — returns Optional",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Find the alphabetically last name using reducing as a downstream.",
+    input: "List<Employee> employees;",
+    output: "Optional[Frank]",
+    hint: "1-arg reducing returns Optional<T>.",
+    solution: `Optional<String> last = employees.stream()
+    .map(Employee::getName)
+    .collect(Collectors.reducing(BinaryOperator.maxBy(Comparator.naturalOrder())));`,
+    explanation:
+      "The 1-arg reducing(op) has no identity — so the result is Optional<T>. Useful as a downstream collector inside groupingBy where each group always has at least one element.",
+  },
+  {
+    id: 134,
+    title: "Collectors.collectingAndThen()",
+    category: "Collectors",
+    difficulty: "Medium",
+    problem: "Collect to a List and then make it unmodifiable.",
+    input: 'List<String> names = List.of("alice", "bob", "carol");',
+    output: "Immutable [ALICE, BOB, CAROL]",
+    hint: "collectingAndThen wraps a finisher around another collector.",
+    solution: `List<String> result = names.stream()
+    .map(String::toUpperCase)
+    .collect(Collectors.collectingAndThen(
+        Collectors.toList(),
+        Collections::unmodifiableList
+    ));`,
+    explanation:
+      "Collectors.collectingAndThen(downstream, finisher) runs the downstream, then applies a final transformation. Common uses: unmodifiable wrappers, unwrapping Optional from maxBy/minBy, converting List → Set, computing percentages.",
+  },
+  {
+    id: 135,
+    title: "Collectors.teeing() — Java 12+",
+    category: "Collectors",
+    difficulty: "Hard",
+    problem: "In a SINGLE pass compute both the average salary and the count of employees.",
+    input: "List<Employee> employees;",
+    output: "AvgAndCount[avg=79166.66, count=6]",
+    hint: "teeing fans out to two collectors and merges via BiFunction.",
+    solution: `record Stats(double avg, long count) {}
+
+Stats result = employees.stream()
+    .collect(Collectors.teeing(
+        Collectors.averagingDouble(Employee::getSalary),
+        Collectors.counting(),
+        Stats::new
+    ));`,
+    explanation:
+      "Collectors.teeing(c1, c2, merger) runs two collectors in parallel over the same stream and merges their results with a BiFunction. Avoids iterating the data twice when you need two independent aggregates.",
+  },
+
+  // ============ COMPARATOR: COMPLETE FUNCTION REFERENCE (136-152) ============
+  {
+    id: 136,
+    title: "Comparator.naturalOrder()",
+    category: "Comparator",
+    difficulty: "Easy",
+    problem: "Sort a list of integers in ascending order using Comparator.naturalOrder().",
+    input: "List<Integer> nums = List.of(5, 2, 8, 1, 9, 3);",
+    output: "[1, 2, 3, 5, 8, 9]",
+    hint: "naturalOrder() works for any Comparable type.",
+    solution: `List<Integer> sorted = nums.stream()
+    .sorted(Comparator.naturalOrder())
+    .toList();`,
+    explanation:
+      "Comparator.naturalOrder() returns a Comparator that uses Comparable.compareTo. Works for Integer, String, LocalDate — anything that implements Comparable. Equivalent to passing nothing to sorted().",
+  },
+  {
+    id: 137,
+    title: "Comparator.reverseOrder()",
+    category: "Comparator",
+    difficulty: "Easy",
+    problem: "Sort strings in descending alphabetical order.",
+    input: 'List<String> names = List.of("Bob", "Alice", "Carol", "Dave");',
+    output: "[Dave, Carol, Bob, Alice]",
+    hint: "reverseOrder() reverses the natural ordering.",
+    solution: `List<String> sorted = names.stream()
+    .sorted(Comparator.reverseOrder())
+    .toList();`,
+    explanation:
+      "Comparator.reverseOrder() is the natural ordering inverted. Equivalent to Comparator.naturalOrder().reversed(). For more complex types, use yourComparator.reversed() instead.",
+  },
+  {
+    id: 138,
+    title: "Comparator.comparing(keyExtractor)",
+    category: "Comparator",
+    difficulty: "Easy",
+    problem: "Sort employees by name.",
+    input: "List<Employee> employees;",
+    output: "Alice, Bob, Carol, Dave, Eve, Frank",
+    hint: "Comparator.comparing pulls a Comparable key from each element.",
+    solution: `List<Employee> sorted = employees.stream()
+    .sorted(Comparator.comparing(Employee::getName))
+    .toList();`,
+    explanation:
+      "Comparator.comparing(Function) extracts a Comparable key (here, name) and compares using its natural order. The cleanest way to sort objects by a single field.",
+  },
+  {
+    id: 139,
+    title: "Comparator.comparing(keyExtractor, keyComparator)",
+    category: "Comparator",
+    difficulty: "Medium",
+    problem: "Sort employees by name length, longest first.",
+    input: "List<Employee> employees;",
+    output: "Carol, Frank, Alice, Dave, Bob, Eve",
+    hint: "2-arg comparing lets you pass a custom comparator for the extracted key.",
+    solution: `List<Employee> sorted = employees.stream()
+    .sorted(Comparator.comparing(
+        Employee::getName,
+        Comparator.comparingInt(String::length).reversed()
+    ))
+    .toList();`,
+    explanation:
+      "The 2-arg comparing(keyExtractor, keyComparator) extracts a key and compares it with a custom Comparator. Useful when the key's natural order isn't what you want.",
+  },
+  {
+    id: 140,
+    title: "Comparator.comparingInt()",
+    category: "Comparator",
+    difficulty: "Easy",
+    problem: "Sort employees by age (avoids Integer boxing).",
+    input: "List<Employee> employees;",
+    output: "Eve(25), Bob(28), Dave(31), Alice(35), Carol(42), Frank(50)",
+    hint: "comparingInt takes a ToIntFunction — faster than comparing for ints.",
+    solution: `List<Employee> sorted = employees.stream()
+    .sorted(Comparator.comparingInt(Employee::getAge))
+    .toList();`,
+    explanation:
+      "Comparator.comparingInt/Long/Double accept primitive-returning functions, avoiding the boxing overhead of comparing(). Use them whenever the sort key is a primitive number.",
+  },
+  {
+    id: 141,
+    title: "Comparator.comparingDouble()",
+    category: "Comparator",
+    difficulty: "Easy",
+    problem: "Sort employees by salary ascending.",
+    input: "List<Employee> employees;",
+    output: "Dave(65k), Frank(70k), Bob(75k), Eve(80k), Carol(90k), Alice(95k)",
+    hint: "comparingDouble for double-keyed sorts.",
+    solution: `List<Employee> sorted = employees.stream()
+    .sorted(Comparator.comparingDouble(Employee::getSalary))
+    .toList();`,
+    explanation:
+      "Identical in shape to comparingInt but for double keys. Internally uses Double.compare to handle NaN and -0.0 correctly — naive subtraction can mis-order such values.",
+  },
+  {
+    id: 142,
+    title: "Comparator.comparingLong()",
+    category: "Comparator",
+    difficulty: "Easy",
+    problem: "Sort transactions by their epoch-day (long key) ascending.",
+    input: "List<Transaction> txns;",
+    output: "Transactions sorted oldest to newest by date.toEpochDay()",
+    hint: "comparingLong accepts a ToLongFunction.",
+    solution: `List<Transaction> sorted = txns.stream()
+    .sorted(Comparator.comparingLong(t -> t.getDate().toEpochDay()))
+    .toList();`,
+    explanation:
+      "Use comparingLong for keys that are long, BigInteger-as-long, timestamps, file sizes, etc. Avoids the (int) cast that would silently overflow.",
+  },
+  {
+    id: 143,
+    title: "Comparator.thenComparing(comparator)",
+    category: "Comparator",
+    difficulty: "Medium",
+    problem: "Sort employees by department, then by name within each department.",
+    input: "List<Employee> employees;",
+    output: "Engineering→[Alice, Bob, Eve], HR→[Frank], Sales→[Carol, Dave]",
+    hint: "Chain two comparators with thenComparing.",
+    solution: `List<Employee> sorted = employees.stream()
+    .sorted(
+        Comparator.comparing(Employee::getDepartment)
+                  .thenComparing(Employee::getName)
+    )
+    .toList();`,
+    explanation:
+      "thenComparing kicks in ONLY when the previous comparator returns 0 (tie). You can chain as many as you want for stable multi-level sorts.",
+  },
+  {
+    id: 144,
+    title: "Comparator.thenComparing(keyExtractor)",
+    category: "Comparator",
+    difficulty: "Medium",
+    problem: "Sort employees by department, then by salary descending within department.",
+    input: "List<Employee> employees;",
+    output: "Per dept, highest-paid first",
+    hint: "thenComparing(Function) extracts a key just like comparing.",
+    solution: `List<Employee> sorted = employees.stream()
+    .sorted(
+        Comparator.comparing(Employee::getDepartment)
+                  .thenComparing(Employee::getSalary, Comparator.reverseOrder())
+    )
+    .toList();`,
+    explanation:
+      "thenComparing(keyExtractor) and thenComparing(keyExtractor, keyComparator) overloads make multi-key sorts read top-to-bottom like SQL ORDER BY a, b DESC.",
+  },
+  {
+    id: 145,
+    title: "Comparator.thenComparingInt()",
+    category: "Comparator",
+    difficulty: "Medium",
+    problem: "Sort by department then by age (primitive int — no boxing).",
+    input: "List<Employee> employees;",
+    output: "Per department, youngest first",
+    hint: "thenComparingInt/Long/Double mirror the comparingX family.",
+    solution: `List<Employee> sorted = employees.stream()
+    .sorted(
+        Comparator.comparing(Employee::getDepartment)
+                  .thenComparingInt(Employee::getAge)
+    )
+    .toList();`,
+    explanation:
+      "Pair this with the comparingInt/Long/Double family for primitive-friendly multi-level sorts. Avoids the Integer-boxing tax of thenComparing(Employee::getAge).",
+  },
+  {
+    id: 146,
+    title: "Comparator.reversed()",
+    category: "Comparator",
+    difficulty: "Easy",
+    problem: "Sort employees by salary, highest first.",
+    input: "List<Employee> employees;",
+    output: "Alice(95k), Carol(90k), Eve(80k), Bob(75k), Frank(70k), Dave(65k)",
+    hint: ".reversed() flips any comparator.",
+    solution: `List<Employee> sorted = employees.stream()
+    .sorted(Comparator.comparingDouble(Employee::getSalary).reversed())
+    .toList();`,
+    explanation:
+      "The .reversed() instance method flips a comparator's sign. CAREFUL with chains: comparing(a).thenComparing(b).reversed() reverses BOTH levels. To reverse only one level, use comparing(a, reverseOrder()) instead.",
+  },
+  {
+    id: 147,
+    title: "Comparator.nullsFirst()",
+    category: "Comparator",
+    difficulty: "Medium",
+    problem: "Sort names; treat null entries as 'smallest' so they appear first.",
+    input: 'List<String> names = Arrays.asList("Bob", null, "Alice", null, "Carol");',
+    output: "[null, null, Alice, Bob, Carol]",
+    hint: "Wrap a comparator with nullsFirst.",
+    solution: `List<String> sorted = names.stream()
+    .sorted(Comparator.nullsFirst(Comparator.naturalOrder()))
+    .toList();`,
+    explanation:
+      "Comparator.nullsFirst(cmp) returns a null-safe comparator: nulls are treated as less than any non-null. Without it, sorting a list containing null throws NullPointerException.",
+  },
+  {
+    id: 148,
+    title: "Comparator.nullsLast()",
+    category: "Comparator",
+    difficulty: "Medium",
+    problem: "Sort names; treat null entries as 'largest' so they appear last.",
+    input: 'List<String> names = Arrays.asList("Bob", null, "Alice", null, "Carol");',
+    output: "[Alice, Bob, Carol, null, null]",
+    hint: "Mirror of nullsFirst.",
+    solution: `List<String> sorted = names.stream()
+    .sorted(Comparator.nullsLast(Comparator.naturalOrder()))
+    .toList();`,
+    explanation:
+      "Comparator.nullsLast(cmp) pushes nulls to the end. Both nullsFirst and nullsLast also handle nulls inside thenComparing chains gracefully.",
+  },
+  {
+    id: 149,
+    title: "Custom Comparator via lambda",
+    category: "Comparator",
+    difficulty: "Easy",
+    problem: "Sort strings by length using a raw lambda Comparator.",
+    input: 'List<String> words = List.of("apple", "hi", "banana", "ok");',
+    output: "[hi, ok, apple, banana]",
+    hint: "Comparator is a functional interface — a lambda is enough.",
+    solution: `List<String> sorted = words.stream()
+    .sorted((a, b) -> Integer.compare(a.length(), b.length()))
+    .toList();`,
+    explanation:
+      "A Comparator is just a function (a,b) -> int. Use Integer.compare / Double.compare instead of subtraction (a.length() - b.length()) — subtraction overflows for large or negative values.",
+  },
+  {
+    id: 150,
+    title: "Multi-level chain: dept asc, salary desc, name asc",
+    category: "Comparator",
+    difficulty: "Hard",
+    problem: "Sort by department (asc), then salary (desc), then name (asc).",
+    input: "List<Employee> employees;",
+    output: "Sorted by 3 levels in that order",
+    hint: "Chain comparing + thenComparing carefully with per-level reverse.",
+    solution: `Comparator<Employee> cmp = Comparator
+    .comparing(Employee::getDepartment)
+    .thenComparing(Employee::getSalary, Comparator.reverseOrder())
+    .thenComparing(Employee::getName);
+
+List<Employee> sorted = employees.stream().sorted(cmp).toList();`,
+    explanation:
+      "Real-world sorting is rarely one level. Build one Comparator and reuse it. To reverse only ONE level, pass reverseOrder() as the keyComparator instead of calling .reversed() at the end of the chain.",
+  },
+  {
+    id: 151,
+    title: "Map.Entry.comparingByKey()",
+    category: "Comparator",
+    difficulty: "Medium",
+    problem: "Stream a Map's entries sorted by key.",
+    input: 'Map<String, Integer> m = Map.of("c", 3, "a", 1, "b", 2);',
+    output: "[a=1, b=2, c=3]",
+    hint: "Map.Entry.comparingByKey gives you a ready-made Comparator.",
+    solution: `List<Map.Entry<String, Integer>> sorted = m.entrySet().stream()
+    .sorted(Map.Entry.comparingByKey())
+    .toList();`,
+    explanation:
+      "Map.Entry exposes static helpers comparingByKey() and comparingByValue() (with optional custom Comparators). Cleaner than writing Comparator.comparing(Map.Entry::getKey) yourself.",
+  },
+  {
+    id: 152,
+    title: "Map.Entry.comparingByValue() reversed",
+    category: "Comparator",
+    difficulty: "Medium",
+    problem: "Find the top 3 entries by value (descending).",
+    input: 'Map<String, Integer> m = Map.of("a", 5, "b", 1, "c", 9, "d", 3, "e", 7);',
+    output: "[c=9, e=7, a=5]",
+    hint: "Sort by value reversed, then limit.",
+    solution: `List<Map.Entry<String, Integer>> top3 = m.entrySet().stream()
+    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+    .limit(3)
+    .toList();`,
+    explanation:
+      "Note the explicit type witness <String, Integer> before comparingByValue — needed because .reversed() confuses Java's type inference. A classic 'top-N' idiom you'll use constantly.",
+  },
 ];
 
 const DIFFICULTIES = ["Easy", "Medium", "Hard"];
@@ -1604,7 +2455,17 @@ const CATEGORIES = [
   "Collect",
   "GroupBy",
   "FlatMap",
+  "Collectors",
+  "Comparator",
 ];
+
+const SECTIONS = ["Streams Practice", "Collectors Reference", "Comparator Reference"];
+
+function getSection(q) {
+  if (q.category === "Collectors") return "Collectors Reference";
+  if (q.category === "Comparator") return "Comparator Reference";
+  return "Streams Practice";
+}
 
 const DIFFICULTY_STYLES = {
   Easy: { bg: "rgba(132, 204, 22, 0.12)", color: "#a3e635", border: "rgba(132, 204, 22, 0.25)" },
@@ -1749,6 +2610,7 @@ export default function StreamPracticeApp() {
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
   const [revealed, setRevealed] = useState({}); // {qid: {hint:bool, solution:bool}}
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [collapsedSections, setCollapsedSections] = useState(new Set());
   const [loaded, setLoaded] = useState(false);
 
   // Editor state — keyed by question id
@@ -1773,6 +2635,10 @@ export default function StreamPracticeApp() {
       const ec = localStorage.getItem("editorCodes");
       if (ec) setEditorCodes(JSON.parse(ec));
     } catch {}
+    try {
+      const cs = localStorage.getItem("collapsedSections");
+      if (cs) setCollapsedSections(new Set(JSON.parse(cs)));
+    } catch {}
     setLoaded(true);
   }, []);
 
@@ -1795,6 +2661,12 @@ export default function StreamPracticeApp() {
       localStorage.setItem("activeId", String(activeId));
     } catch {}
   }, [activeId, loaded]);
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem("collapsedSections", JSON.stringify([...collapsedSections]));
+    } catch {}
+  }, [collapsedSections, loaded]);
 
   // Persist editor codes (debounced)
   useEffect(() => {
@@ -1828,6 +2700,32 @@ export default function StreamPracticeApp() {
   const active = useMemo(() => Q.find((q) => q.id === activeId) || Q[0], [activeId]);
   const activeReveal = revealed[activeId] || { hint: false, solution: false };
   const progress = Math.round((completed.size / Q.length) * 100);
+
+  const groupedFiltered = useMemo(() => {
+    const groups = Object.fromEntries(SECTIONS.map((s) => [s, []]));
+    filtered.forEach((q) => groups[getSection(q)].push(q));
+    return groups;
+  }, [filtered]);
+
+  // Auto-expand the section containing the currently active question
+  useEffect(() => {
+    const sec = getSection(active);
+    setCollapsedSections((prev) => {
+      if (!prev.has(sec)) return prev;
+      const next = new Set(prev);
+      next.delete(sec);
+      return next;
+    });
+  }, [active]);
+
+  const toggleSection = (sec) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sec)) next.delete(sec);
+      else next.add(sec);
+      return next;
+    });
+  };
 
   const toggleCompleted = (id) => {
     setCompleted((prev) => {
@@ -1993,6 +2891,30 @@ export default function StreamPracticeApp() {
         .btn-ghost:hover {
           background: var(--surface);
           color: var(--text);
+        }
+        .section-header {
+          display: flex; align-items: center; gap: 8px;
+          width: 100%;
+          padding: 9px 14px; margin: 2px 0 4px;
+          border: none; background: transparent;
+          border-radius: 6px;
+          cursor: pointer;
+          color: var(--text-faint);
+          font-family: inherit;
+          font-size: 10.5px; font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          transition: color 0.12s ease, background 0.12s ease;
+        }
+        .section-header:hover { color: var(--text); background: var(--surface); }
+        .section-count {
+          background: var(--surface-2);
+          color: var(--text-dim);
+          padding: 1px 7px;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0;
         }
         .q-row {
           display: flex; align-items: flex-start; gap: 10px;
@@ -2225,7 +3147,7 @@ export default function StreamPracticeApp() {
                 letterSpacing: "0.02em",
               }}
             >
-              100 Java Stream interview questions · curated practice
+              152 Java Stream questions · Collectors & Comparator reference · curated practice
             </p>
           </div>
         </div>
@@ -2414,96 +3336,121 @@ export default function StreamPracticeApp() {
                 No questions match these filters.
               </div>
             )}
-            {filtered.map((q) => {
-              const isActive = q.id === activeId;
-              const isDone = completed.has(q.id);
-              const isBookmarked = bookmarked.has(q.id);
+            {SECTIONS.map((sec) => {
+              const items = groupedFiltered[sec];
+              if (!items || items.length === 0) return null;
+              const collapsed = collapsedSections.has(sec);
               return (
-                <div
-                  key={q.id}
-                  className={`q-row ${isActive ? "active" : ""}`}
-                  onClick={() => setActiveId(q.id)}
-                >
-                  <div
-                    className={`check-box ${isDone ? "done" : ""}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleCompleted(q.id);
-                    }}
-                  >
-                    {isDone && <Check size={12} strokeWidth={3} color="#1a1a0a" />}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        alignItems: "baseline",
-                        marginBottom: 4,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 11,
-                          color: "var(--text-faint)",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {String(q.id).padStart(3, "0")}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 13,
-                          fontWeight: isActive ? 600 : 500,
-                          color: isDone ? "var(--text-dim)" : "var(--text)",
-                          textDecoration: isDone ? "line-through" : "none",
-                          textDecorationColor: "var(--text-faint)",
-                          flex: 1,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {q.title}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          padding: "2px 7px",
-                          borderRadius: 4,
-                          fontWeight: 600,
-                          letterSpacing: "0.03em",
-                          background: DIFFICULTY_STYLES[q.difficulty].bg,
-                          color: DIFFICULTY_STYLES[q.difficulty].color,
-                        }}
-                      >
-                        {q.difficulty.toUpperCase()}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: "var(--text-faint)",
-                        }}
-                      >
-                        {q.category}
-                      </span>
-                    </div>
-                  </div>
+                <div key={sec} style={{ marginBottom: 8 }}>
                   <button
-                    className={`bookmark-btn ${isBookmarked ? "on" : ""}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleBookmark(q.id);
-                    }}
+                    type="button"
+                    onClick={() => toggleSection(sec)}
+                    className="section-header"
                   >
-                    <Bookmark
-                      size={14}
-                      fill={isBookmarked ? "currentColor" : "none"}
+                    <ChevronDown
+                      size={12}
+                      style={{
+                        transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                        transition: "transform 0.15s ease",
+                      }}
                     />
+                    <span style={{ flex: 1, textAlign: "left" }}>{sec}</span>
+                    <span className="section-count">{items.length}</span>
                   </button>
+                  {!collapsed &&
+                    items.map((q) => {
+                      const isActive = q.id === activeId;
+                      const isDone = completed.has(q.id);
+                      const isBookmarked = bookmarked.has(q.id);
+                      return (
+                        <div
+                          key={q.id}
+                          className={`q-row ${isActive ? "active" : ""}`}
+                          onClick={() => setActiveId(q.id)}
+                        >
+                          <div
+                            className={`check-box ${isDone ? "done" : ""}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCompleted(q.id);
+                            }}
+                          >
+                            {isDone && <Check size={12} strokeWidth={3} color="#1a1a0a" />}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 8,
+                                alignItems: "baseline",
+                                marginBottom: 4,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: 11,
+                                  color: "var(--text-faint)",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {String(q.id).padStart(3, "0")}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: isActive ? 600 : 500,
+                                  color: isDone ? "var(--text-dim)" : "var(--text)",
+                                  textDecoration: isDone ? "line-through" : "none",
+                                  textDecorationColor: "var(--text-faint)",
+                                  flex: 1,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {q.title}
+                              </span>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  padding: "2px 7px",
+                                  borderRadius: 4,
+                                  fontWeight: 600,
+                                  letterSpacing: "0.03em",
+                                  background: DIFFICULTY_STYLES[q.difficulty].bg,
+                                  color: DIFFICULTY_STYLES[q.difficulty].color,
+                                }}
+                              >
+                                {q.difficulty.toUpperCase()}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  color: "var(--text-faint)",
+                                }}
+                              >
+                                {q.category}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            className={`bookmark-btn ${isBookmarked ? "on" : ""}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleBookmark(q.id);
+                            }}
+                          >
+                            <Bookmark
+                              size={14}
+                              fill={isBookmarked ? "currentColor" : "none"}
+                            />
+                          </button>
+                        </div>
+                      );
+                    })}
                 </div>
               );
             })}
