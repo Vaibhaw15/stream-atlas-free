@@ -18,7 +18,9 @@ import {
   Sparkles,
   Terminal,
   Copy,
+  Play,
 } from "lucide-react";
+import JavaRunner from "./components/JavaRunner";
 
 const Q = [
   // ============ EASY: FILTER & MAP BASICS (1-20) ============
@@ -940,7 +942,7 @@ List<Integer> diff = a.stream()
     category: "Sort",
     difficulty: "Hard",
     problem: "Find the Nth highest distinct number.",
-    input: "List<Integer> nums; int n = 3;",
+    input: "List<Integer> nums = List.of(5, 12, 3, 12, 18, 7, 18); int n = 3;",
     output: "Optional<Integer>",
     hint: "Generalize Q60 — skip(n-1).",
     solution: `Optional<Integer> nthHighest = nums.stream()
@@ -1059,7 +1061,7 @@ Map<Boolean, List<Employee>> split = employees.stream()
     category: "Sort",
     difficulty: "Hard",
     problem: "Get the top 3 entries with highest values.",
-    input: "Map<String, Integer> scores;",
+    input: 'Map<String, Integer> scores = Map.of("alice", 82, "bob", 95, "carol", 78, "dave", 91, "eve", 88);',
     output: "Top 3 entries by value",
     hint: "Sort by value desc, then limit.",
     solution: `List<Map.Entry<String, Integer>> top3 = scores.entrySet().stream()
@@ -1900,7 +1902,7 @@ String reversed = IntStream.range(0, parts.length)
     .collect(Collectors.summarizingInt(Employee::getAge));
 
 long count = stats.getCount();
-int sum = stats.getSum();
+long sum = stats.getSum();
 int min = stats.getMin();
 int max = stats.getMax();
 double avg = stats.getAverage();`,
@@ -2129,7 +2131,7 @@ double avg = stats.getAverage();`,
     hint: "1-arg reducing returns Optional<T>.",
     solution: `Optional<String> last = employees.stream()
     .map(Employee::getName)
-    .collect(Collectors.reducing(BinaryOperator.maxBy(Comparator.naturalOrder())));`,
+    .collect(Collectors.reducing(BinaryOperator.maxBy(Comparator.<String>naturalOrder())));`,
     explanation:
       "The 1-arg reducing(op) has no identity — so the result is Optional<T>. Useful as a downstream collector inside groupingBy where each group always has at least one element.",
   },
@@ -3719,6 +3721,14 @@ export default function StreamPracticeApp() {
               </code>
               .
             </p>
+          </div>
+
+          {/* In-browser Java runner (CheerpJ) */}
+          <div style={{ marginBottom: 28 }}>
+            <div className="label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Play size={12} /> RUN IN BROWSER — compiles with javac via CheerpJ
+            </div>
+            <JavaRunner key={activeId} code={activeCode} />
           </div>
 
           {/* Solution */}
