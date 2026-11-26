@@ -16,9 +16,7 @@ import {
   Hash,
   RotateCcw,
   Sparkles,
-  Terminal,
   Copy,
-  Play,
 } from "lucide-react";
 import JavaRunner from "./components/JavaRunner";
 
@@ -2782,20 +2780,6 @@ export default function StreamPracticeApp() {
     setEditorCodes((prev) => ({ ...prev, [activeId]: val }));
   };
 
-  const handleEditorKeyDown = (e) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const ta = e.target;
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const newValue = ta.value.substring(0, start) + "    " + ta.value.substring(end);
-      updateCode(newValue);
-      requestAnimationFrame(() => {
-        ta.selectionStart = ta.selectionEnd = start + 4;
-      });
-    }
-  };
-
   const handleResetCode = () => {
     setEditorCodes((prev) => {
       const next = { ...prev };
@@ -2986,45 +2970,6 @@ export default function StreamPracticeApp() {
           to { opacity: 1; transform: translateY(0); }
         }
         .fade-in { animation: fadeIn 0.25s ease; }
-        .editor-shell {
-          background: #0d0d0f;
-          border: 1px solid var(--border);
-          border-radius: 10px;
-          overflow: hidden;
-          transition: border-color 0.2s;
-        }
-        .editor-shell:focus-within {
-          border-color: var(--accent-strong);
-        }
-        .editor-toolbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 10px 14px;
-          border-bottom: 1px solid var(--border);
-          background: rgba(255,255,255,0.015);
-          font-size: 12px;
-          color: var(--text-faint);
-          font-family: 'JetBrains Mono', monospace;
-        }
-        .editor-toolbar-actions { display: flex; gap: 6px; align-items: center; }
-        .editor-textarea {
-          width: 100%;
-          border: none;
-          background: transparent;
-          color: #e4e4e7;
-          font-family: 'JetBrains Mono', 'Fira Code', monospace;
-          font-size: 13px;
-          line-height: 1.65;
-          padding: 16px 18px;
-          outline: none;
-          resize: vertical;
-          min-height: 280px;
-          tab-size: 4;
-          -moz-tab-size: 4;
-          display: block;
-        }
-        .editor-textarea::selection { background: rgba(251, 191, 36, 0.25); }
         .run-btn {
           background: var(--accent);
           color: #1a1a0a;
@@ -3629,106 +3574,44 @@ export default function StreamPracticeApp() {
             )}
           </div>
 
-          {/* Code Editor */}
+          {/* Code Editor + in-browser runner (CheerpJ) */}
           <div style={{ marginBottom: 28 }}>
-            <div
-              className="label"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                justifyContent: "space-between",
-              }}
-            >
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Terminal size={12} /> EDITOR — write your solution, copy to your IDE
-              </span>
-            </div>
-            <div className="editor-shell">
-              <div className="editor-toolbar">
-                <span>Main.java</span>
-                <div className="editor-toolbar-actions">
+            <JavaRunner
+              key={activeId}
+              code={activeCode}
+              onCodeChange={updateCode}
+              actions={
+                <>
                   <button
-                    className="icon-btn"
+                    type="button"
+                    className="jr-icon-btn"
                     onClick={handleResetCode}
                     title="Reset to starter template"
                   >
                     <RotateCcw size={13} />
                   </button>
                   <button
-                    className="icon-btn"
+                    type="button"
+                    className="jr-icon-btn"
                     onClick={handleLoadSolution}
                     title="Load official solution into editor"
-                    style={{ width: "auto", padding: "0 10px", fontSize: 11, gap: 5 }}
+                    style={{ width: "auto", padding: "0 10px" }}
                   >
                     <Sparkles size={12} /> Solution
                   </button>
-                  <button className="run-btn" onClick={handleCopy}>
-                    {copied ? (
-                      <>
-                        <Check size={13} /> Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={13} /> Copy
-                      </>
-                    )}
+                  <button
+                    type="button"
+                    className="jr-icon-btn"
+                    onClick={handleCopy}
+                    title="Copy code"
+                    style={{ width: "auto", padding: "0 10px" }}
+                  >
+                    {copied ? <Check size={12} /> : <Copy size={12} />}
+                    {copied ? "Copied" : "Copy"}
                   </button>
-                </div>
-              </div>
-              <textarea
-                className="editor-textarea"
-                value={activeCode}
-                onChange={(e) => updateCode(e.target.value)}
-                onKeyDown={handleEditorKeyDown}
-                spellCheck={false}
-                autoCapitalize="off"
-                autoCorrect="off"
-                autoComplete="off"
-              />
-            </div>
-            <p
-              style={{
-                marginTop: 10,
-                fontSize: 12,
-                color: "var(--text-faint)",
-                lineHeight: 1.5,
-              }}
-            >
-              Paste into your IDE, or run with{" "}
-              <code
-                style={{
-                  background: "var(--surface)",
-                  padding: "1px 6px",
-                  borderRadius: 4,
-                  color: "var(--text-dim)",
-                  fontSize: 11.5,
-                }}
-              >
-                jshell
-              </code>{" "}
-              /{" "}
-              <code
-                style={{
-                  background: "var(--surface)",
-                  padding: "1px 6px",
-                  borderRadius: 4,
-                  color: "var(--text-dim)",
-                  fontSize: 11.5,
-                }}
-              >
-                java Main.java
-              </code>
-              .
-            </p>
-          </div>
-
-          {/* In-browser Java runner (CheerpJ) */}
-          <div style={{ marginBottom: 28 }}>
-            <div className="label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Play size={12} /> RUN IN BROWSER — compiles with javac via CheerpJ
-            </div>
-            <JavaRunner key={activeId} code={activeCode} />
+                </>
+              }
+            />
           </div>
 
           {/* Solution */}
