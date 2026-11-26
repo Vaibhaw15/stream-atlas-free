@@ -80,6 +80,16 @@ java Main.java   # Java 11+ runs single-file source directly
 
 ---
 
+## Run in the browser
+
+Each question also has a **Run** box (`app/components/JavaRunner.jsx`) that compiles and runs the code in your browser with [CheerpJ](https://cheerpj.com) (Java 17 with javac built in, so `List.of`, `.toList()`, records etc. all work). Nothing runs on a server.
+
+- CheerpJ downloads on the first Run (a few seconds, then cached).
+- `public/java-runner/StreamAtlasLauncher.jar` must be deployed. It compiles the code in memory. Source: `java-runner/StreamAtlasLauncher.java`; rebuild with `./java-runner/build.sh` (needs JDK 11+).
+- Memory grows with every run, so after 10 runs the runner suggests a reload, and after 15 it reloads the page by itself and re-runs your code. Code and progress are kept.
+- An infinite loop freezes the tab until you reload it. CheerpJ runs Java on the page's main thread, so it can't be stopped.
+- CheerpJ has its own license terms; check them if you use this commercially.
+
 ## What you get
 
 - **100 questions** spanning Easy / Medium / Hard, across 7 categories: Filter, Map, Sort, Reduce, Collect, GroupBy, FlatMap.
