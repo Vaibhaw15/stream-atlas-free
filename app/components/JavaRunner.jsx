@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Play, Loader2, RotateCcw, Eraser, RefreshCw } from "lucide-react";
+import { Play, Loader2, Eraser, RefreshCw } from "lucide-react";
+import JavaEditor from "./JavaEditor";
 
 /*
  * <JavaRunner code={...} />
@@ -194,13 +195,13 @@ const STATUS_TEXT = {
 const BUSY = new Set(["loading", "warming", "queued", "running"]);
 
 export default function JavaRunner({
-  code: initialCode = "",
+  code = "",
+  onCodeChange = () => {},
   title = "Main.java",
+  actions = null,
   cheerpjUrl = DEFAULT_CHEERPJ_URL,
   launcherJar = DEFAULT_LAUNCHER_JAR,
-  minHeight = 220,
 }) {
-  const [code, setCode] = useState(initialCode);
   const [status, setStatus] = useState("idle");
   const [output, setOutput] = useState("");
   const [elapsed, setElapsed] = useState(null);
@@ -208,36 +209,21 @@ export default function JavaRunner({
   const [reloadSoon, setReloadSoon] = useState(false);
   const mounted = useRef(true);
   const outRef = useRef(null);
+  const codeRef = useRef(code);
+  codeRef.current = code;
 
-  // Follow the `code` prop (switching question, editing the main editor,
-  // loading the solution). After a memory reload, bring back runner edits and
-  // finish the run the user asked for.
-  // (The page may mount us with a placeholder question before it restores the
-  // user's place, so the saved state is only used once it matches.)
-  const restored = useRef(null);
-  const autoRun = useRef(null);
-  useEffect(() => {
-    if (!restored.current) {
-      try {
-        const saved = JSON.parse(sessionStorage.getItem(RESTORE_KEY) || "null");
-        if (saved && Date.now() - saved.at > 60000) sessionStorage.removeItem(RESTORE_KEY);
-        else if (saved && saved.initial === initialCode) {
-          restored.current = saved;
-          sessionStorage.removeItem(RESTORE_KEY);
-        }
-      } catch {}
-    }
-    const saved = restored.current;
-    if (saved && saved.initial === initialCode) {
-      setCode(saved.code);
-      if (saved.run && !saved.ran) {
-        saved.ran = true;
-        autoRun.current = saved.code;
-      }
-    } else {
-      setCode(initialCode);
-    }
-  }, [initialCode]);
+  // After a memory reload, bring back the code and finish the run the user
+  // asked for. (The page may mount us with a placeholder question before it
+  // restores the user's place, so wait until the code matches.)
+  const autoRun = useRef(undefined);
+  if (autoRun.current === undefined && typeof window !== "undefined") {
+    autoRun.current = null;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(RESTORE_KEY) || "null");
+      sessionStorage.removeItem(RESTORE_KEY);
+      if (saved && Date.now() - saved.at < 60000 && saved.run) autoRun.current = saved.code;
+    } catch {}
+  }
 
   useEffect(() => {
     mounted.current = true;
@@ -255,14 +241,18 @@ export default function JavaRunner({
   }, [output]);
 
   const busy = BUSY.has(status);
+  const busyRef = useRef(false);
+  busyRef.current = busy;
   const safeSet = (fn) => mounted.current && fn();
 
-  const run = async (source = code) => {
-    if (busy) return;
+  const run = async () => {
+    if (busyRef.current) return;
+    const source = codeRef.current;
     if (reloadRequired()) {
       reloadPage(true);
       return;
     }
+    busyRef.current = true;
     setOutput("");
     setElapsed(null);
     setExitCode(null);
@@ -296,35 +286,18 @@ export default function JavaRunner({
     try {
       sessionStorage.setItem(
         RESTORE_KEY,
-        JSON.stringify({ initial: initialCode, code, run: thenRun, at: Date.now() })
+        JSON.stringify({ code: codeRef.current, run: thenRun, at: Date.now() })
       );
     } catch {}
     window.location.reload();
   }
 
   useEffect(() => {
-    if (autoRun.current !== null && code === autoRun.current) {
+    if (autoRun.current && code === autoRun.current) {
       autoRun.current = null;
-      run(code);
+      run();
     }
   });
-
-  const onKeyDown = (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault();
-      run();
-      return;
-    }
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const ta = e.target;
-      const { selectionStart: s, selectionEnd: end, value } = ta;
-      setCode(value.slice(0, s) + "    " + value.slice(end));
-      requestAnimationFrame(() => {
-        ta.selectionStart = ta.selectionEnd = s + 4;
-      });
-    }
-  };
 
   const tone =
     status === "ok" ? "ok" : ["compile", "runtime", "nomain", "exit", "error"].includes(status) ? "bad" : "";
@@ -341,15 +314,7 @@ export default function JavaRunner({
       <div className="jr-toolbar">
         <span>{title}</span>
         <div className="jr-actions">
-          <button
-            type="button"
-            className="jr-icon-btn"
-            onClick={() => setCode(initialCode)}
-            title="Reset to the code from the editor above"
-            disabled={busy}
-          >
-            <RotateCcw size={13} />
-          </button>
+          {actions}
           <button
             type="button"
             className="jr-run-btn"
@@ -363,18 +328,7 @@ export default function JavaRunner({
         </div>
       </div>
 
-      <textarea
-        className="jr-code"
-        style={{ minHeight }}
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        onKeyDown={onKeyDown}
-        spellCheck={false}
-        autoCapitalize="off"
-        autoCorrect="off"
-        autoComplete="off"
-        aria-label={`${title} source`}
-      />
+      <JavaEditor value={code} onChange={onCodeChange} onRun={run} />
 
       <div className="jr-out-bar">
         <span className={`jr-status ${tone}`} aria-live="polite">
@@ -435,17 +389,9 @@ const JR_CSS = `
   background: rgba(255,255,255,0.015);
 }
 .jr-toolbar { border-bottom: 1px solid var(--border, rgba(255,255,255,0.08)); }
+.jr-shell { background: #0d0d0f; }
 .jr-out-bar { border-top: 1px solid var(--border, rgba(255,255,255,0.08)); padding: 7px 14px; min-height: 40px; }
 .jr-actions { display: flex; gap: 6px; align-items: center; }
-.jr-code {
-  width: 100%; border: none; background: transparent;
-  color: #e4e4e7;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 13px; line-height: 1.65;
-  padding: 16px 18px; outline: none; resize: vertical;
-  tab-size: 4; -moz-tab-size: 4; display: block; box-sizing: border-box;
-}
-.jr-code::selection { background: rgba(251, 191, 36, 0.25); }
 .jr-run-btn {
   background: var(--accent, #fbbf24); color: #1a1a0a;
   border: none; padding: 7px 14px; border-radius: 6px;
@@ -455,7 +401,7 @@ const JR_CSS = `
 }
 .jr-run-btn:disabled { opacity: 0.65; cursor: progress; }
 .jr-icon-btn {
-  background: transparent;
+  background: transparent; font-family: inherit; font-size: 11px; gap: 5px;
   border: 1px solid var(--border, rgba(255,255,255,0.08));
   color: var(--text-dim, #a1a1aa);
   width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
